@@ -1,4 +1,4 @@
-package org.xtremeware.iudex.businesslogic.facade;
+package org.xtremeware.iudex.businesslogic.helper;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -12,7 +12,7 @@ import org.h2.tools.RunScript;
 import static org.junit.Assert.assertTrue;
 import org.xtremeware.iudex.helper.MultipleMessagesException;
 
-public class TestHelper {
+public class FacadesTestHelper {
 
     private static boolean init = false;
 

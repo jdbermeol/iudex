@@ -6,6 +6,7 @@ import java.util.List;
 import static org.junit.Assert.*;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.xtremeware.iudex.businesslogic.helper.FacadesTestHelper;
 import org.xtremeware.iudex.businesslogic.service.InactiveUserException;
 import org.xtremeware.iudex.helper.*;
 import org.xtremeware.iudex.vo.UserVo;
@@ -23,7 +24,7 @@ public class UsersFacadeIT {
 
     @BeforeClass
     public static void setUpClass() throws Exception {
-        TestHelper.initializeDatabase();
+        FacadesTestHelper.initializeDatabase();
     }
 
     public UsersFacadeIT() throws
@@ -85,7 +86,7 @@ public class UsersFacadeIT {
         try {
             usersFacade.addUser(null);
         } catch (MultipleMessagesException ex) {
-            TestHelper.checkExceptionMessages(ex, expectedMessages);
+            FacadesTestHelper.checkExceptionMessages(ex, expectedMessages);
         }
 
         UserVo user = new UserVo();
@@ -110,13 +111,13 @@ public class UsersFacadeIT {
         try {
             usersFacade.addUser(user);
         } catch (MultipleMessagesException ex) {
-            TestHelper.checkExceptionMessages(ex, expectedMessages);
+            FacadesTestHelper.checkExceptionMessages(ex, expectedMessages);
         }
 
         user.setFirstName("");
         user.setLastName("");
-        user.setUserName(TestHelper.randomString(MIN_USERNAME_LENGTH - 1));
-        user.setPassword(TestHelper.randomString(MIN_USER_PASSWORD_LENGTH - 1));
+        user.setUserName(FacadesTestHelper.randomString(MIN_USERNAME_LENGTH - 1));
+        user.setPassword(FacadesTestHelper.randomString(MIN_USER_PASSWORD_LENGTH - 1));
         user.setProgramsId(new ArrayList<Long>());
         user.setRole(Role.STUDENT);
 
@@ -131,13 +132,13 @@ public class UsersFacadeIT {
         try {
             usersFacade.addUser(user);
         } catch (MultipleMessagesException ex) {
-            TestHelper.checkExceptionMessages(ex, expectedMessages);
+            FacadesTestHelper.checkExceptionMessages(ex, expectedMessages);
         }
 
-        user.setFirstName(TestHelper.randomString(10));
-        user.setLastName(TestHelper.randomString(10));
-        user.setUserName(TestHelper.randomString(MAX_USERNAME_LENGTH + 1));
-        user.setPassword(TestHelper.randomString(MAX_USER_PASSWORD_LENGTH + 1));
+        user.setFirstName(FacadesTestHelper.randomString(10));
+        user.setLastName(FacadesTestHelper.randomString(10));
+        user.setUserName(FacadesTestHelper.randomString(MAX_USERNAME_LENGTH + 1));
+        user.setPassword(FacadesTestHelper.randomString(MAX_USER_PASSWORD_LENGTH + 1));
         List<Long> programsId = user.getProgramsId();
         programsId.add(null);
 
@@ -150,11 +151,11 @@ public class UsersFacadeIT {
         try {
             usersFacade.addUser(user);
         } catch (MultipleMessagesException ex) {
-            TestHelper.checkExceptionMessages(ex, expectedMessages);
+            FacadesTestHelper.checkExceptionMessages(ex, expectedMessages);
         }
 
-        user.setUserName(TestHelper.randomString(MIN_USERNAME_LENGTH));
-        user.setPassword(TestHelper.randomString(MIN_USER_PASSWORD_LENGTH));
+        user.setUserName(FacadesTestHelper.randomString(MIN_USERNAME_LENGTH));
+        user.setPassword(FacadesTestHelper.randomString(MIN_USER_PASSWORD_LENGTH));
         programsId.set(0, -1L);
 
         expectedMessages = new String[]{
@@ -164,7 +165,7 @@ public class UsersFacadeIT {
         try {
             usersFacade.addUser(user);
         } catch (MultipleMessagesException ex) {
-            TestHelper.checkExceptionMessages(ex, expectedMessages);
+            FacadesTestHelper.checkExceptionMessages(ex, expectedMessages);
         }
     }
 

@@ -1,5 +1,6 @@
 package org.xtremeware.iudex.businesslogic.facade;
 
+import org.xtremeware.iudex.businesslogic.helper.FacadesTestHelper;
 import java.util.*;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -32,7 +33,7 @@ public class CommentsFacadeIT {
 
     @BeforeClass
     public static void setUpClass() throws Exception {
-        TestHelper.initializeDatabase();
+        FacadesTestHelper.initializeDatabase();
     }
 
     @AfterClass

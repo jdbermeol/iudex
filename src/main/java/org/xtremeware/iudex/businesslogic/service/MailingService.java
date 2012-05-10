@@ -40,66 +40,75 @@ public class MailingService {
 
     private void checkConfig(MailingConfigVo config) throws InvalidVoException {
         if (config == null) {
-            throw new IllegalArgumentException("MailConfigVo config cannot be null");
+            throw new IllegalArgumentException(
+                    "MailConfigVo config cannot be null");
         }
         if (!ValidityHelper.isValidDomain(config.getSmtpServer())) {
-            throw new InvalidVoException("String smtpServer in the MailingConfigVo provided must be a valid domian.");
+            throw new InvalidVoException(
+                    "String smtpServer in the MailingConfigVo provided must be a valid domian.");
         }
         if (!ValidityHelper.isValidEmail(config.getSender())) {
-            throw new InvalidVoException("String sender in the MailingConfigVo provided must be a valid email address");
+            throw new InvalidVoException(
+                    "String sender in the MailingConfigVo provided must be a valid email address");
         }
         if (config.getSmtpServerPort() > 65535 || config.getSmtpServerPort() < 0) {
-            throw new InvalidVoException("int smtpServerPort in the MailingConfigVo provided must be in between 0 and 65535");
+            throw new InvalidVoException(
+                    "int smtpServerPort in the MailingConfigVo provided must be in between 0 and 65535");
         }
         if (config.getSmtpUser() == null) {
-            throw new InvalidVoException("String smtpServerUser in the MailingConfigVo provided cannot be null");
+            throw new InvalidVoException(
+                    "String smtpServerUser in the MailingConfigVo provided cannot be null");
         }
         if (config.getSmtpPassword() == null) {
-            throw new InvalidVoException("String smtpServerPassword in the MailingConfigVo provided cannot be null");
+            throw new InvalidVoException(
+                    "String smtpServerPassword in the MailingConfigVo provided cannot be null");
         }
     }
 
-    public void sendMessage(String message, String subject, String receiver) throws ExternalServiceConnectionException {
+    public void sendMessage(String message, String subject, String receiver)
+            throws ExternalServiceConnectionException {
         try {
-            //Session session = Session.getDefaultInstance(props, null);
             Session session = Session.getInstance(props,
                     new javax.mail.Authenticator() {
 
-                @Override
+                        @Override
                         protected PasswordAuthentication getPasswordAuthentication() {
-                            return new PasswordAuthentication(config.getSmtpUser(), config.getSmtpPassword());
+                            return new PasswordAuthentication(
+                                    config.getSmtpUser(),
+                                    config.getSmtpPassword());
                         }
                     });
-            // -- Create a new message --
+            // Create a new message
             Message msg = new MimeMessage(session);
             try {
-                // -- Set the FROM and TO fields --
+                // Set the FROM field
                 msg.setFrom(new InternetAddress(config.getSender()));
             } catch (AddressException ex) {
-                throw new IllegalArgumentException("There was a problem while translating sender email address");
+                throw new IllegalArgumentException(
+                        "There was a problem while translating sender email address",
+                        ex);
             }
-            msg.setRecipients(Message.RecipientType.TO,
-                    InternetAddress.parse(receiver, false));
-            // -- Set the subject and body text --
+            try {
+                // Set the TO field
+                msg.setRecipients(Message.RecipientType.TO,
+                        InternetAddress.parse(receiver, false));
+            } catch (AddressException ex) {
+                throw new IllegalArgumentException(
+                        "There was a problem while translating receiver email address",
+                        ex);
+            }
+            // Set the subject and content
             msg.setSubject(subject);
-            msg.setText(message);
+            msg.setContent(message, "text/html");
             msg.setSentDate(new Date());
-            // -- Send the message --
+            // Send the message
             msg.saveChanges();
 
-            //Use Transport to deliver the message
+            // Use Transport to deliver the message
             Transport.send(msg);
-            /*
-             * Transport transport = session.getTransport("smtp");
-             * transport.connect(config.getSmtpServer(), config.getSmtpUser(),
-             * config.getSmtpPassword()); transport.sendMessage(msg,
-             * msg.getAllRecipients());
-            transport.close();
-             */
-
         } catch (MessagingException ex) {
-            throw new ExternalServiceConnectionException("There was a problem while sending the email", ex);
+            throw new ExternalServiceConnectionException(
+                    "There was a problem while sending the email", ex);
         }
-
     }
 }
