@@ -3,9 +3,12 @@ package org.xtremeware.iudex.businesslogic.facade;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import static org.junit.Assert.*;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.xtremeware.iudex.businesslogic.DuplicityException;
 import org.xtremeware.iudex.businesslogic.helper.FacadesTestHelper;
 import org.xtremeware.iudex.businesslogic.service.InactiveUserException;
 import org.xtremeware.iudex.helper.*;
@@ -21,6 +24,7 @@ public class UsersFacadeIT {
     private final int MAX_USERNAME_LENGTH;
     private final int MAX_USER_PASSWORD_LENGTH;
     private final int MIN_USER_PASSWORD_LENGTH;
+    private final EntityManagerFactory emf;
 
     @BeforeClass
     public static void setUpClass() throws Exception {
@@ -39,28 +43,30 @@ public class UsersFacadeIT {
         MIN_USER_PASSWORD_LENGTH =
                 Integer.parseInt(ConfigurationVariablesHelper.getVariable(
                 ConfigurationVariablesHelper.MIN_USER_PASSWORD_LENGTH));
+        emf = FacadesTestHelper.createEntityManagerFactory();
     }
 
     /**
      * Test of a successful registration
      */
     @Test
-    public void test_BL_2_1() throws MultipleMessagesException {
+    public void test_BL_2_1() throws MultipleMessagesException,
+            DuplicityException {
         UserVo user = new UserVo();
         user.setFirstName("John");
         user.setLastName("Doe");
+        user.setUserName("healarconr");
         user.setPassword("123456789");
         user.setProgramsId(Arrays.asList(new Long[]{2537L, 2556L}));
         user.setRole(Role.STUDENT);
-        user.setUserName("healarconr");
         user.setActive(true); // Should be overriden
         UserVo expectedUser = new UserVo();
         expectedUser.setFirstName("John");
         expectedUser.setLastName("Doe");
+        expectedUser.setUserName("healarconr");
         expectedUser.setPassword(SecurityHelper.hashPassword("123456789"));
         expectedUser.setProgramsId(Arrays.asList(new Long[]{2537L, 2556L}));
         expectedUser.setRole(Role.STUDENT);
-        expectedUser.setUserName("healarconr");
         expectedUser.setActive(false);
         UsersFacade usersFacade = Config.getInstance().getFacadeFactory().
                 getUsersFacade();
@@ -70,13 +76,60 @@ public class UsersFacadeIT {
         // The id is OK, transfer it to expectedUser to ease the assertion
         expectedUser.setId(user.getId());
         assertEquals(expectedUser, user);
+
+        EntityManager em = emf.createEntityManager();
+
+        // Will throw an exception if not found
+        em.createQuery(
+                "SELECT u" +
+                " FROM User u" +
+                " WHERE u.id = :id" +
+                " AND u.firstName = :firstName" +
+                " AND u.lastName = :lastName" +
+                " AND u.userName = :userName" +
+                " AND u.password = :password" +
+                " AND u.role = :role" +
+                " AND u.active = :active").setParameter("id",
+                expectedUser.getId()).setParameter("firstName",
+                expectedUser.getFirstName()).setParameter("lastName",
+                expectedUser.getLastName()).setParameter("userName",
+                expectedUser.getUserName()).setParameter("password",
+                expectedUser.getPassword()).setParameter("role", Role.STUDENT).
+                setParameter("active", expectedUser.isActive()).getSingleResult();
+
+        List<Long> programsId = em.createQuery(
+                "SELECT p.id FROM User u JOIN u.programs p WHERE u.id = :id").
+                setParameter("id", expectedUser.getId()).getResultList();
+        List<Long> expectedProgramsId = expectedUser.getProgramsId();
+
+        assertEquals(expectedProgramsId, programsId);
+    }
+
+    /**
+     * Test of an attempt to register a user which already exists
+     */
+    @Test(expected = DuplicityException.class)
+    public void test_BL_2_2() throws MultipleMessagesException, Exception {
+        final String userName = "student5";
+
+        UserVo user = new UserVo();
+        user.setFirstName("John");
+        user.setLastName("Doe");
+        user.setUserName(userName); // Already exists
+        user.setPassword("123456789");
+        user.setProgramsId(Arrays.asList(new Long[]{2537L, 2556L}));
+        user.setRole(Role.STUDENT);
+        user.setActive(true);
+        UsersFacade usersFacade = Config.getInstance().getFacadeFactory().
+                getUsersFacade();
+        usersFacade.addUser(user);
     }
 
     /**
      * Test of a registration attempt with invalid data
      */
     @Test
-    public void test_BL_2_3() {
+    public void test_BL_2_3() throws Exception {
         String[] expectedMessages = new String[]{
             "user.null"
         };
@@ -117,7 +170,8 @@ public class UsersFacadeIT {
         user.setFirstName("");
         user.setLastName("");
         user.setUserName(FacadesTestHelper.randomString(MIN_USERNAME_LENGTH - 1));
-        user.setPassword(FacadesTestHelper.randomString(MIN_USER_PASSWORD_LENGTH - 1));
+        user.setPassword(FacadesTestHelper.randomString(MIN_USER_PASSWORD_LENGTH -
+                1));
         user.setProgramsId(new ArrayList<Long>());
         user.setRole(Role.STUDENT);
 
@@ -138,7 +192,8 @@ public class UsersFacadeIT {
         user.setFirstName(FacadesTestHelper.randomString(10));
         user.setLastName(FacadesTestHelper.randomString(10));
         user.setUserName(FacadesTestHelper.randomString(MAX_USERNAME_LENGTH + 1));
-        user.setPassword(FacadesTestHelper.randomString(MAX_USER_PASSWORD_LENGTH + 1));
+        user.setPassword(FacadesTestHelper.randomString(MAX_USER_PASSWORD_LENGTH +
+                1));
         List<Long> programsId = user.getProgramsId();
         programsId.add(null);
 
@@ -155,7 +210,8 @@ public class UsersFacadeIT {
         }
 
         user.setUserName(FacadesTestHelper.randomString(MIN_USERNAME_LENGTH));
-        user.setPassword(FacadesTestHelper.randomString(MIN_USER_PASSWORD_LENGTH));
+        user.setPassword(
+                FacadesTestHelper.randomString(MIN_USER_PASSWORD_LENGTH));
         programsId.set(0, -1L);
 
         expectedMessages = new String[]{

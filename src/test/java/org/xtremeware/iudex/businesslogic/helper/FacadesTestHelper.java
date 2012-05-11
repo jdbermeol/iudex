@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import javax.persistence.EntityManagerFactory;
 import org.h2.tools.RunScript;
 import static org.junit.Assert.assertTrue;
 import org.xtremeware.iudex.helper.MultipleMessagesException;
@@ -40,5 +41,9 @@ public class FacadesTestHelper {
     
     public static String randomString(int length){
         return new BigInteger(length * 5, new Random()).toString(32);
+    }
+    
+    public static EntityManagerFactory createEntityManagerFactory() {
+        return javax.persistence.Persistence.createEntityManagerFactory("org.xtremeware.iudex_local");
     }
 }

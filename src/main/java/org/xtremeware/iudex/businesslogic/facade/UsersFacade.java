@@ -3,6 +3,7 @@ package org.xtremeware.iudex.businesslogic.facade;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
+import org.xtremeware.iudex.businesslogic.DuplicityException;
 import org.xtremeware.iudex.businesslogic.helper.FacadesHelper;
 import org.xtremeware.iudex.businesslogic.service.InactiveUserException;
 import org.xtremeware.iudex.businesslogic.service.ServiceFactory;
@@ -51,7 +52,8 @@ public class UsersFacade extends AbstractFacade {
      * @return the added user
      * @throws MultipleMessagesException if there are validation problems
      */
-    public UserVo addUser(UserVo user) throws MultipleMessagesException {
+    public UserVo addUser(UserVo user) throws MultipleMessagesException,
+            DuplicityException {
         EntityManager em = null;
         EntityTransaction tx = null;
         UserVo newUser = null;
@@ -69,6 +71,8 @@ public class UsersFacade extends AbstractFacade {
             tx.commit();
         } catch (Exception ex) {
             getServiceFactory().createLogService().error(ex.getMessage(), ex);
+            FacadesHelper.checkExceptionAndRollback(em, tx, ex,
+                    DuplicityException.class);
             FacadesHelper.checkExceptionAndRollback(em, tx, ex,
                     MultipleMessagesException.class);
             FacadesHelper.rollbackTransaction(em, tx, ex);
@@ -126,7 +130,8 @@ public class UsersFacade extends AbstractFacade {
             tx.commit();
         } catch (Exception ex) {
             getServiceFactory().createLogService().error(ex.getMessage(), ex);
-            FacadesHelper.checkExceptionAndRollback(em, tx, ex, MultipleMessagesException.class);
+            FacadesHelper.checkExceptionAndRollback(em, tx, ex,
+                    MultipleMessagesException.class);
             FacadesHelper.rollbackTransaction(em, tx, ex);
         } finally {
             FacadesHelper.closeEntityManager(em);
