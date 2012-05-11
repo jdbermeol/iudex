@@ -11,8 +11,10 @@ import org.junit.Test;
 import org.xtremeware.iudex.businesslogic.DuplicityException;
 import org.xtremeware.iudex.businesslogic.helper.FacadesTestHelper;
 import org.xtremeware.iudex.businesslogic.service.InactiveUserException;
+import org.xtremeware.iudex.businesslogic.service.MailingService;
 import org.xtremeware.iudex.entity.UserEntity;
 import org.xtremeware.iudex.helper.*;
+import org.xtremeware.iudex.vo.MailingConfigVo;
 import org.xtremeware.iudex.vo.UserVo;
 
 /**
@@ -225,6 +227,113 @@ public class UsersFacadeIT {
         } catch (MultipleMessagesException ex) {
             FacadesTestHelper.checkExceptionMessages(ex, expectedMessages);
         }
+    }
+
+    /**
+     * Test of a failed registration due to email problems
+     */
+    @Test
+    public void test_BL_2_4() throws MultipleMessagesException,
+            DuplicityException {
+        UserVo user = new UserVo();
+        user.setFirstName("Diane");
+        user.setLastName("Doe");
+        user.setUserName("someone");
+        user.setPassword("123456789");
+        user.setProgramsId(Arrays.asList(new Long[]{2537L, 2556L}));
+        user.setRole(Role.STUDENT);
+
+        UsersFacade usersFacade = Config.getInstance().getFacadeFactory().
+                getUsersFacade();
+        MailingService mailingService = Config.getInstance().getServiceFactory().
+                createMailingService();
+
+        MailingConfigVo originalMailingConfig = new MailingConfigVo();
+        originalMailingConfig.setSender(ConfigurationVariablesHelper.getVariable(
+                ConfigurationVariablesHelper.MAILING_SENDER_EMAIL_ADDRESS));
+        originalMailingConfig.setSmtpPassword(ConfigurationVariablesHelper.
+                getVariable(
+                ConfigurationVariablesHelper.MAILING_SMTP_PASSWORD));
+        originalMailingConfig.setSmtpServer(ConfigurationVariablesHelper.
+                getVariable(
+                ConfigurationVariablesHelper.MAILING_SMTP_SERVER));
+        originalMailingConfig.setSmtpServerPort(Integer.parseInt(ConfigurationVariablesHelper.
+                getVariable(ConfigurationVariablesHelper.MAILING_SMTP_PORT)));
+        originalMailingConfig.setSmtpUser(ConfigurationVariablesHelper.
+                getVariable(
+                ConfigurationVariablesHelper.MAILING_SMTP_USER));
+
+        try {
+            MailingConfigVo mailingConfig = new MailingConfigVo();
+            mailingConfig.setSender("Invalid!");
+            mailingConfig.setSmtpPassword(
+                    originalMailingConfig.getSmtpPassword());
+            mailingConfig.setSmtpUser(originalMailingConfig.getSmtpUser());
+            mailingConfig.setSmtpServer(originalMailingConfig.getSmtpServer());
+            mailingConfig.setSmtpServerPort(
+                    originalMailingConfig.getSmtpServerPort());
+            testMailingConfig(mailingService, mailingConfig);
+
+            mailingConfig.setSender(originalMailingConfig.getSender());
+            mailingConfig.setSmtpPassword(null);
+            testMailingConfig(mailingService, mailingConfig);
+
+            mailingConfig.setSmtpPassword(
+                    originalMailingConfig.getSmtpPassword());
+            mailingConfig.setSmtpUser(null);
+            testMailingConfig(mailingService, mailingConfig);
+
+            mailingConfig.setSmtpUser(originalMailingConfig.getSmtpUser());
+            mailingConfig.setSmtpServer("Invalid!");
+            testMailingConfig(mailingService, mailingConfig);
+
+            mailingConfig.setSmtpServer(originalMailingConfig.getSmtpServer());
+            mailingConfig.setSmtpServerPort(-1);
+            testMailingConfig(mailingService, mailingConfig);
+
+            mailingConfig.setSmtpServerPort(65536);
+            testMailingConfig(mailingService, mailingConfig);
+
+            mailingConfig.setSmtpServerPort(
+                    originalMailingConfig.getSmtpServerPort());
+            mailingConfig.setSmtpUser("someone@example.com");
+            testMailingConnection(usersFacade, user, mailingService,
+                    mailingConfig);
+
+            mailingConfig.setSmtpUser(originalMailingConfig.getSmtpUser());
+            mailingConfig.setSmtpPassword("Invalid!");
+            testMailingConnection(usersFacade, user, mailingService,
+                    mailingConfig);
+        } catch (RuntimeException ex) {
+            mailingService.setConfig(originalMailingConfig);
+            throw ex;
+        }
+    }
+
+    private void testMailingConfig(MailingService mailingService,
+            MailingConfigVo mailingConfig) {
+        boolean exception = false;
+        try {
+            mailingService.setConfig(mailingConfig);
+        } catch (IllegalArgumentException ex) {
+            exception = true;
+        }
+        assertTrue(exception);
+    }
+
+    private void testMailingConnection(UsersFacade usersFacade, UserVo user,
+            MailingService mailingService, MailingConfigVo mailingConfig) throws
+            MultipleMessagesException, DuplicityException {
+        mailingService.setConfig(mailingConfig);
+        boolean exception = false;
+        try {
+            usersFacade.addUser(user);
+        } catch (RuntimeException ex) {
+            if (ex.getCause() instanceof ExternalServiceConnectionException) {
+                exception = true;
+            }
+        }
+        assertTrue(exception);
     }
 
     /**
