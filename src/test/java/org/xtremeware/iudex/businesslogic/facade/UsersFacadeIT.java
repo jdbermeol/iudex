@@ -11,6 +11,7 @@ import org.junit.Test;
 import org.xtremeware.iudex.businesslogic.DuplicityException;
 import org.xtremeware.iudex.businesslogic.helper.FacadesTestHelper;
 import org.xtremeware.iudex.businesslogic.service.InactiveUserException;
+import org.xtremeware.iudex.entity.UserEntity;
 import org.xtremeware.iudex.helper.*;
 import org.xtremeware.iudex.vo.UserVo;
 
@@ -94,7 +95,8 @@ public class UsersFacadeIT {
                 expectedUser.getFirstName()).setParameter("lastName",
                 expectedUser.getLastName()).setParameter("userName",
                 expectedUser.getUserName()).setParameter("password",
-                expectedUser.getPassword()).setParameter("role", Role.STUDENT).
+                expectedUser.getPassword()).setParameter("role", expectedUser.
+                getRole()).
                 setParameter("active", expectedUser.isActive()).getSingleResult();
 
         List<Long> programsId = em.createQuery(
@@ -236,6 +238,15 @@ public class UsersFacadeIT {
                 getUsersFacade();
         UserVo user = usersFacade.logIn(userName, password);
         assertNotNull(user);
+
+        EntityManager em = emf.createEntityManager();
+        em.createQuery("SELECT u" +
+                " FROM User u" +
+                " WHERE u.userName = :userName" +
+                " AND u.password = :password" +
+                " AND active = true").setParameter("userName", userName).
+                setParameter("password", SecurityHelper.hashPassword(password)).
+                getSingleResult();
     }
 
     /**
@@ -269,8 +280,8 @@ public class UsersFacadeIT {
      */
     @Test(expected = InactiveUserException.class)
     public void test_BL_3_3() throws Exception {
-        String userName = "student3";
-        String password = "123456789";
+        final String userName = "student3";
+        final String password = "123456789";
         UsersFacade usersFacade = Config.getInstance().getFacadeFactory().
                 getUsersFacade();
         usersFacade.logIn(userName, password);
@@ -281,14 +292,24 @@ public class UsersFacadeIT {
      */
     @Test
     public void test_BL_10_1() throws Exception {
-        String confirmationKey =
+        final String confirmationKey =
                 "1d141671f909bb21d3658372a7dbb87af521bc8d8a92088fbdada64604bf1cf1";
+
         UsersFacade usersFacade = Config.getInstance().getFacadeFactory().
                 getUsersFacade();
         UserVo user = usersFacade.activateUser(confirmationKey);
-        assertEquals(true, user.isActive());
+        Long id = user.getId();
+        assertTrue(user.isActive());
         user = usersFacade.activateUser(confirmationKey);
         assertNull(user);
+
+        EntityManager em = emf.createEntityManager();
+        UserEntity userEntity = (UserEntity) em.createQuery("SELECT u" +
+                " FROM User u" +
+                " WHERE u.id = :id").setParameter("id", id).
+                getSingleResult();
+        assertTrue(userEntity.isActive());
+        assertNull(userEntity.getConfirmationKey());
     }
 
     /**
@@ -312,10 +333,10 @@ public class UsersFacadeIT {
         user.setId(5L);
         user.setFirstName("New name");
         user.setLastName("New last name");
+        user.setUserName("newUserName");
         user.setPassword("New password");
         user.setProgramsId(Arrays.asList(new Long[]{2537L, 2556L}));
         user.setRole(Role.ADMINISTRATOR);
-        user.setUserName("newUserName");
         UserVo expectedUser = new UserVo();
         expectedUser.setId(5L);
         expectedUser.setFirstName("New name");
@@ -328,6 +349,29 @@ public class UsersFacadeIT {
                 getUsersFacade();
         user = usersFacade.editUser(user);
         assertEquals(expectedUser, user);
+
+        EntityManager em = emf.createEntityManager();
+        em.createQuery("SELECT u" +
+                " FROM User u" +
+                " WHERE u.id = :id" +
+                " AND u.firstName = :firstName" +
+                " AND u.lastName = :lastName" +
+                " AND u.userName = :userName" +
+                " AND u.password = :password" +
+                " AND u.role = :role").setParameter("id", expectedUser.getId()).
+                setParameter("firstName", expectedUser.getFirstName()).
+                setParameter("lastName",
+                expectedUser.getLastName()).setParameter("userName",
+                expectedUser.getUserName()).setParameter("password",
+                expectedUser.getPassword()).
+                setParameter("role", expectedUser.getRole()).getSingleResult();
+
+        List<Long> programsId = em.createQuery(
+                "SELECT p.id FROM User u JOIN u.programs p WHERE u.id = :id").
+                setParameter("id", expectedUser.getId()).getResultList();
+        List<Long> expectedProgramsId = expectedUser.getProgramsId();
+
+        assertEquals(expectedProgramsId, programsId);
     }
 
     /**
